@@ -31,6 +31,7 @@ impl Widget for &Simulation {
         let canvas = Canvas::default()
             .x_bounds([area.x as f64, (area.x + area.width) as f64])
             .y_bounds([area.y as f64, (area.y + area.height) as f64])
+            .marker(ratatui::symbols::Marker::Block)
             .paint(|context| {
                 let mut points: HashMap<Color, Vec<(f64, f64)>> = HashMap::new();
 
