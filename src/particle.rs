@@ -7,6 +7,7 @@ pub enum Cell {
     Sand,
     Wood,
     Fire,
+    Border,
 }
 
 pub enum Action {
@@ -33,6 +34,7 @@ impl Cell {
             Cell::Sand => self.handle_sand(neighbours),
             Cell::Wood => self.handle_wood(neighbours),
             Cell::Fire => self.handle_fire(neighbours),
+            Cell::Border => Ok(Action::None),
         }
     }
 
