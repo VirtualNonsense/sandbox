@@ -1,0 +1,77 @@
+
+name: Build
+
+on:
+  push:
+
+
+env:
+  BIN_NAME: sandbox
+
+
+jobs:
+  build:
+    name: Build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Rust toolchain (stable)
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          # Optional: target-Cache pro OS/Arch trennen
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Build release
+        run: cargo build --locked --release
+
+      # Paketieren der Binaries als tar.gz (auch unter Windows via tar verfügbar)
+      - name: Package artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          OS="$(echo "${{ runner.os }}" | tr '[:upper:]' '[:lower:]')"  # windows/macos/ubuntu
+          case "$OS" in
+            ubuntu)  OS=linux ;;
+            macos)   OS=macos ;;
+            windows) OS=windows ;;
+          esac
+
+          ARCH="$(uname -m)"  # z.B. x86_64, arm64
+          EXT=""
+          if [ "$OS" = "windows" ]; then EXT=".exe"; fi
+
+          BIN_PATH="target/release/${BIN_NAME}${EXT}"
+          if [ ! -f "$BIN_PATH" ]; then
+            echo "Binary $BIN_PATH nicht gefunden. Hast du BIN_NAME korrekt gesetzt?"
+            exit 1
+          fi
+
+          mkdir -p dist
+          # Optional: README & LICENSE beilegen, falls vorhanden
+          PKG_DIR="${BIN_NAME}-${OS}-${ARCH}"
+          mkdir -p "$PKG_DIR"
+          cp "$BIN_PATH" "$PKG_DIR/"
+          [ -f README.md ] && cp README.md "$PKG_DIR/" || true
+          [ -f LICENSE* ] && cp LICENSE* "$PKG_DIR/" || true
+
+          tar -czf "dist/${PKG_DIR}.tar.gz" "$PKG_DIR"
+          echo "Erzeugt: dist/${PKG_DIR}.tar.gz"
+          ls -lah dist
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.BIN_NAME }}-${{ runner.os }}
+          path: dist/*.tar.gz
+          if-no-files-found: error
+
