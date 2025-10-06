@@ -71,7 +71,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.BIN_NAME }}-${{ runner.os }}
+          name: ${{ env.BIN_NAME }}-${{ matrix.os }}
           path: dist/*.tar.gz
           if-no-files-found: error
 
