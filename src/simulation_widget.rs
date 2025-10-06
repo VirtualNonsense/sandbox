@@ -43,16 +43,21 @@ impl Simulation {
 
     pub fn handle_mouse_event(&mut self, event: &MouseEvent) -> Result<()> {
         match event.kind {
-            crossterm::event::MouseEventKind::Up(_event)
-            | crossterm::event::MouseEventKind::Drag(_event) => {
-                self.flip(event.column, event.row);
+            crossterm::event::MouseEventKind::Up(button)
+            | crossterm::event::MouseEventKind::Drag(button) => {
+                let cell = match button {
+                    crossterm::event::MouseButton::Left => Cell::Sand,
+                    crossterm::event::MouseButton::Right => Cell::Wood,
+                    crossterm::event::MouseButton::Middle => Cell::Fire,
+                };
+                self.flip(event.column, event.row, cell);
             }
             _ => {}
         }
         Ok(())
     }
 
-    fn flip(&mut self, cursor_x: u16, cursor_y: u16) {
+    fn flip(&mut self, cursor_x: u16, cursor_y: u16, cell: Cell) {
         let (cursor_x, cursor_y) = if let Some(win) = &self.window
             && win.height >= cursor_y
         {
@@ -63,7 +68,7 @@ impl Simulation {
 
         let idx = Self::get_key_from_coords(cursor_x, cursor_y);
 
-        self.src_buffer.entry(idx).or_insert(Cell::Sand);
+        self.src_buffer.entry(idx).or_insert(cell);
     }
 
     pub fn handle_app_event(&mut self, event: &AppEvent) -> Result<()> {
@@ -75,72 +80,74 @@ impl Simulation {
 
     pub fn handle_ticks(&mut self) -> Result<()> {
         self.dst_buffer.clear();
+        let (rows, columns) = if let Some(win) = &self.window {
+            (win.height as i16, win.width as i16)
+        } else {
+            (i16::MAX, i16::MAX)
+        };
         for (idx, cell) in self.src_buffer.iter() {
             let (x, y) = Self::get_coords_from_key(*idx);
+
+            let (x, y) = (x as i16, y as i16);
             let mut neighbour_map: HashMap<particle::Direction, &particle::Cell> = HashMap::new();
-            if let Some(cell) = self.src_buffer.get(&Self::get_key_from_coords(x, y + 1)) {
+
+            fn find_cell(
+                x: i16,
+                y: i16,
+                columns: i16,
+                rows: i16,
+                map: &HashMap<u32, Cell>,
+            ) -> Option<&Cell> {
+                if x < 0 || y < 0 || x >= columns || y >= rows {
+                    return Some(&Cell::Border);
+                }
+                map.get(&Simulation::get_key_from_coords(x as u16, y as u16))
+            }
+
+            if let Some(cell) = find_cell(x, y - 1, columns, rows, &self.src_buffer) {
                 neighbour_map.insert(particle::Direction::Down, cell);
             }
-            if let Some(cell) = self
-                .src_buffer
-                .get(&Self::get_key_from_coords(x + 1, y + 1))
-            {
+
+            if let Some(cell) = find_cell(x + 1, y - 1, columns, rows, &self.src_buffer) {
                 neighbour_map.insert(particle::Direction::DownRight, cell);
             }
-            if let Some(cell) = self.src_buffer.get(&Self::get_key_from_coords(x + 1, y)) {
+            if let Some(cell) = find_cell(x - 1, y - 1, columns, rows, &self.src_buffer) {
+                neighbour_map.insert(particle::Direction::DownLeft, cell);
+            }
+            if let Some(cell) = find_cell(x + 1, y, columns, rows, &self.src_buffer) {
                 neighbour_map.insert(particle::Direction::Right, cell);
             }
-            if y > 0
-                && let Some(cell) = self
-                    .src_buffer
-                    .get(&Self::get_key_from_coords(x + 1, y - 1))
-            {
+            if let Some(cell) = find_cell(x + 1, y + 1, columns, rows, &self.src_buffer) {
                 neighbour_map.insert(particle::Direction::UpRight, cell);
             }
-            if y > 0
-                && let Some(cell) = self.src_buffer.get(&Self::get_key_from_coords(x, y - 1))
-            {
+            if let Some(cell) = find_cell(x, y + 1, columns, rows, &self.src_buffer) {
                 neighbour_map.insert(particle::Direction::Up, cell);
             }
-            if y > 0
-                && x > 0
-                && let Some(cell) = self
-                    .src_buffer
-                    .get(&Self::get_key_from_coords(x - 1, y - 1))
-            {
+            if let Some(cell) = find_cell(x - 1, y + 1, columns, rows, &self.src_buffer) {
                 neighbour_map.insert(particle::Direction::UpLeft, cell);
             }
-            if x > 0
-                && let Some(cell) = self.src_buffer.get(&Self::get_key_from_coords(x - 1, y))
-            {
+            if let Some(cell) = find_cell(x - 1, y, columns, rows, &self.src_buffer) {
                 neighbour_map.insert(particle::Direction::Left, cell);
-            }
-            if x > 0
-                && let Some(cell) = self
-                    .src_buffer
-                    .get(&Self::get_key_from_coords(x - 1, y + 1))
-            {
-                neighbour_map.insert(particle::Direction::DownLeft, cell);
             }
             if let Ok(action) = cell.update(neighbour_map) {
                 fn move_cell(
-                    x: u16,
-                    y: u16,
+                    x: i16,
+                    y: i16,
                     dx: i16,
                     dy: i16,
                     cell: particle::Cell,
                     bffr: &mut HashMap<u32, particle::Cell>,
                 ) -> eyre::Result<()> {
-                    let x = if x >= dx.unsigned_abs() {
-                        (x as i16 - dx) as u16
+                    let x = if x >= dx.abs() {
+                        (x + dx) as u16
                     } else {
-                        x
+                        x as u16
                     };
 
-                    let y = if y >= dy.unsigned_abs() {
-                        (y as i16 - dy) as u16
+                    let y = if y >= dy.abs() {
+                        (y + dy) as u16
                     } else {
-                        y
+                        y as u16
                     };
                     let new_idx = Simulation::get_key_from_coords(x, y);
                     bffr.insert(new_idx, cell);
@@ -155,13 +162,13 @@ impl Simulation {
                     }
                     Action::Move(direction) => match direction {
                         particle::Direction::Up => {
-                            move_cell(x, y, 0, -1, cell.clone(), &mut self.dst_buffer)?;
+                            move_cell(x, y, 0, 1, cell.clone(), &mut self.dst_buffer)?;
                         }
                         particle::Direction::UpRight => {
-                            move_cell(x, y, 1, -1, cell.clone(), &mut self.dst_buffer)?;
+                            move_cell(x, y, 1, 1, cell.clone(), &mut self.dst_buffer)?;
                         }
                         particle::Direction::UpLeft => {
-                            move_cell(x, y, -1, -1, cell.clone(), &mut self.dst_buffer)?;
+                            move_cell(x, y, -1, 1, cell.clone(), &mut self.dst_buffer)?;
                         }
                         particle::Direction::Right => {
                             move_cell(x, y, 1, 0, cell.clone(), &mut self.dst_buffer)?;
@@ -170,13 +177,13 @@ impl Simulation {
                             move_cell(x, y, -1, 0, cell.clone(), &mut self.dst_buffer)?;
                         }
                         particle::Direction::Down => {
-                            move_cell(x, y, 0, 1, cell.clone(), &mut self.dst_buffer)?;
+                            move_cell(x, y, 0, -1, cell.clone(), &mut self.dst_buffer)?;
                         }
                         particle::Direction::DownRight => {
-                            move_cell(x, y, 1, 1, cell.clone(), &mut self.dst_buffer)?;
+                            move_cell(x, y, 1, -1, cell.clone(), &mut self.dst_buffer)?;
                         }
                         particle::Direction::DownLeft => {
-                            move_cell(x, y, -1, 1, cell.clone(), &mut self.dst_buffer)?;
+                            move_cell(x, y, -1, -1, cell.clone(), &mut self.dst_buffer)?;
                         }
                     },
                     Action::Vanish => {
@@ -203,8 +210,9 @@ impl Simulation {
             let (x, y) = Self::get_coords_from_key(*id);
             let color = match *cell {
                 Cell::Sand => Color::Yellow,
-                Cell::Wood => Color::Rgb(25, 59, 0),
+                Cell::Wood => Color::Rgb(25, 120, 25),
                 Cell::Fire => Color::Red,
+                Cell::Border => Color::Cyan,
             };
             ((x as f64, y as f64), color)
         })
