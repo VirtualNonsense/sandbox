@@ -1,14 +1,4 @@
-use std::collections::HashMap;
-
-use ratatui::{
-    buffer::Buffer,
-    layout::Rect,
-    style::Color,
-    widgets::{
-        Widget,
-        canvas::{Canvas, Points},
-    },
-};
+use ratatui::{buffer::Buffer, layout::Rect, style::Stylize, widgets::Widget};
 
 use crate::{app::App, simulation_widget::Simulation};
 impl Widget for &App {
@@ -28,27 +18,10 @@ impl Widget for &Simulation {
     where
         Self: Sized,
     {
-        let canvas = Canvas::default()
-            .x_bounds([area.x as f64, (area.x + area.width) as f64])
-            .y_bounds([area.y as f64, (area.y + area.height) as f64])
-            .marker(ratatui::symbols::Marker::Block)
-            .paint(|context| {
-                let mut points: HashMap<Color, Vec<(f64, f64)>> = HashMap::new();
-
-                for ((x, y), color) in self.iter_cells() {
-                    if let Some(v) = points.get_mut(&color) {
-                        v.push((x, y));
-                    } else {
-                        points.insert(color, vec![(x, y)]);
-                    }
-                }
-                for (color, values) in points.iter() {
-                    context.draw(&Points {
-                        coords: values,
-                        color: *color,
-                    });
-                }
-            });
-        canvas.render(area, buf);
+        for (position, color) in self.iter_cells() {
+            let area = Rect::from((position, ratatui::layout::Size::new(1, 1))).clamp(area);
+            let pixel_widget = ratatui::symbols::block::FULL.fg(color);
+            pixel_widget.render(area, buf);
+        }
     }
 }

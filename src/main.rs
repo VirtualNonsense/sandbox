@@ -7,6 +7,7 @@ pub mod event;
 pub mod particle;
 mod simulation_widget;
 pub mod ui;
+pub mod window;
 fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
     let terminal = ratatui::init();
