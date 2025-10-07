@@ -497,7 +497,7 @@ mod tests {
 
     #[cfg(test)]
     mod test_move_cell_h3_w3 {
-        use std::collections::{HashMap, hash_map};
+        use std::collections::HashMap;
 
         use crate::{particle::Cell, simulation_widget::Simulation};
 
