@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use color_eyre::eyre::{self, Ok};
 use rand;
+
 #[derive(Clone)]
 pub enum Cell {
     Sand,
@@ -95,7 +96,11 @@ impl Cell {
         if !neighbours.contains_key(&second) {
             return Ok(Action::Move(second));
         }
-        let (first, second) = if rand::random_bool(0.5) {
+
+        if neighbours.contains_key(&Direction::Up) {
+            return Ok(Action::None);
+        }
+        let (first, second) = if rand::random_bool(1.) {
             (Direction::Right, Direction::Left)
         } else {
             (Direction::Left, Direction::Right)
