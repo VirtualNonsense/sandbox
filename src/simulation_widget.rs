@@ -30,7 +30,7 @@ impl Simulation {
             | crossterm::event::MouseEventKind::Drag(button) => {
                 let cell = match button {
                     crossterm::event::MouseButton::Left => Cell::Sand,
-                    crossterm::event::MouseButton::Right => Cell::Wood,
+                    crossterm::event::MouseButton::Right => Cell::Water,
                     crossterm::event::MouseButton::Middle => Cell::Fire,
                 };
                 self.flip(event.column, event.row, cell);
@@ -101,29 +101,57 @@ impl Simulation {
             let (x, y) = (x as i16, y as i16);
             let mut neighbour_map: HashMap<particle::Direction, &particle::Cell> = HashMap::new();
 
-            if let Some(cell) = Self::find_cell(x, y + 1, columns, rows, &self.src_buffer) {
+            if let Some(cell) = Self::find_cell(x, y + 1, columns, rows, &self.dst_buffer) {
+                neighbour_map.insert(particle::Direction::Down, cell);
+            } else if let Some(cell) = Self::find_cell(x, y + 1, columns, rows, &self.src_buffer) {
                 neighbour_map.insert(particle::Direction::Down, cell);
             }
 
-            if let Some(cell) = Self::find_cell(x + 1, y + 1, columns, rows, &self.src_buffer) {
+            if let Some(cell) = Self::find_cell(x + 1, y + 1, columns, rows, &self.dst_buffer) {
+                neighbour_map.insert(particle::Direction::DownRight, cell);
+            } else if let Some(cell) =
+                Self::find_cell(x + 1, y + 1, columns, rows, &self.src_buffer)
+            {
                 neighbour_map.insert(particle::Direction::DownRight, cell);
             }
-            if let Some(cell) = Self::find_cell(x - 1, y + 1, columns, rows, &self.src_buffer) {
+
+            if let Some(cell) = Self::find_cell(x - 1, y + 1, columns, rows, &self.dst_buffer) {
+                neighbour_map.insert(particle::Direction::DownLeft, cell);
+            } else if let Some(cell) =
+                Self::find_cell(x - 1, y + 1, columns, rows, &self.src_buffer)
+            {
                 neighbour_map.insert(particle::Direction::DownLeft, cell);
             }
-            if let Some(cell) = Self::find_cell(x + 1, y, columns, rows, &self.src_buffer) {
+
+            if let Some(cell) = Self::find_cell(x + 1, y, columns, rows, &self.dst_buffer) {
+                neighbour_map.insert(particle::Direction::Right, cell);
+            } else if let Some(cell) = Self::find_cell(x + 1, y, columns, rows, &self.src_buffer) {
                 neighbour_map.insert(particle::Direction::Right, cell);
             }
-            if let Some(cell) = Self::find_cell(x + 1, y - 1, columns, rows, &self.src_buffer) {
+
+            if let Some(cell) = Self::find_cell(x + 1, y - 1, columns, rows, &self.dst_buffer) {
+                neighbour_map.insert(particle::Direction::UpRight, cell);
+            } else if let Some(cell) =
+                Self::find_cell(x + 1, y - 1, columns, rows, &self.src_buffer)
+            {
                 neighbour_map.insert(particle::Direction::UpRight, cell);
             }
-            if let Some(cell) = Self::find_cell(x, y - 1, columns, rows, &self.src_buffer) {
+
+            if let Some(cell) = Self::find_cell(x, y - 1, columns, rows, &self.dst_buffer) {
+                neighbour_map.insert(particle::Direction::Up, cell);
+            } else if let Some(cell) = Self::find_cell(x, y - 1, columns, rows, &self.src_buffer) {
                 neighbour_map.insert(particle::Direction::Up, cell);
             }
-            if let Some(cell) = Self::find_cell(x - 1, y - 1, columns, rows, &self.src_buffer) {
+            if let Some(cell) = Self::find_cell(x - 1, y - 1, columns, rows, &self.dst_buffer) {
+                neighbour_map.insert(particle::Direction::UpLeft, cell);
+            } else if let Some(cell) =
+                Self::find_cell(x - 1, y - 1, columns, rows, &self.src_buffer)
+            {
                 neighbour_map.insert(particle::Direction::UpLeft, cell);
             }
-            if let Some(cell) = Self::find_cell(x - 1, y, columns, rows, &self.src_buffer) {
+            if let Some(cell) = Self::find_cell(x - 1, y, columns, rows, &self.dst_buffer) {
+                neighbour_map.insert(particle::Direction::Left, cell);
+            } else if let Some(cell) = Self::find_cell(x - 1, y, columns, rows, &self.src_buffer) {
                 neighbour_map.insert(particle::Direction::Left, cell);
             }
             if let Ok(action) = cell.update(neighbour_map) {
@@ -243,6 +271,7 @@ impl Simulation {
                 Cell::Wood => Color::Rgb(25, 120, 25),
                 Cell::Fire => Color::Red,
                 Cell::Border => Color::Cyan,
+                Cell::Water => Color::Blue,
             };
             (Position::from((x, y)), color)
         })

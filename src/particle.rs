@@ -7,6 +7,7 @@ pub enum Cell {
     Sand,
     Wood,
     Fire,
+    Water,
     Border,
 }
 
@@ -35,6 +36,7 @@ impl Cell {
             Cell::Wood => self.handle_wood(neighbours),
             Cell::Fire => self.handle_fire(neighbours),
             Cell::Border => Ok(Action::None),
+            Cell::Water => self.handle_water(neighbours),
         }
     }
 
@@ -73,6 +75,36 @@ impl Cell {
             .collect();
         if !filer.is_empty() {
             return Ok(Action::Replace(Cell::Fire));
+        }
+        Ok(Action::None)
+    }
+
+    fn handle_water(&self, neighbours: HashMap<Direction, &Cell>) -> eyre::Result<Action> {
+        if !neighbours.contains_key(&Direction::Down) {
+            return Ok(Action::Move(Direction::Down));
+        }
+
+        let (first, second) = if rand::random_bool(0.5) {
+            (Direction::DownRight, Direction::DownLeft)
+        } else {
+            (Direction::DownLeft, Direction::DownRight)
+        };
+        if !neighbours.contains_key(&first) {
+            return Ok(Action::Move(first));
+        };
+        if !neighbours.contains_key(&second) {
+            return Ok(Action::Move(second));
+        }
+        let (first, second) = if rand::random_bool(0.5) {
+            (Direction::Right, Direction::Left)
+        } else {
+            (Direction::Left, Direction::Right)
+        };
+        if !neighbours.contains_key(&first) {
+            return Ok(Action::Move(first));
+        };
+        if !neighbours.contains_key(&second) {
+            return Ok(Action::Move(second));
         }
         Ok(Action::None)
     }
