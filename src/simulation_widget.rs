@@ -72,11 +72,7 @@ impl Simulation {
         map: &mut HashMap<coord::Direction, &'a Cell>,
     ) {
         let direction_vec: Vec2 = direction.clone().into();
-        if let Some(cell) = Self::find_cell(pos + &direction_vec, width, height, &self.dst_buffer) {
-            map.insert(direction, cell);
-        } else if let Some(cell) =
-            Self::find_cell(pos + direction_vec, width, height, &self.src_buffer)
-        {
+        if let Some(cell) = Self::find_cell(pos + direction_vec, width, height, &self.src_buffer) {
             map.insert(direction, cell);
         }
     }
