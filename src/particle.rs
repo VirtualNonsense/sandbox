@@ -90,7 +90,7 @@ impl Cell {
         if neighbours.contains_key(&Direction::Up) {
             return Ok(Action::None);
         }
-        let (first, second) = if rand::random_bool(1.) {
+        let (first, second) = if rand::random_bool(0.5) {
             (Direction::Right, Direction::Left)
         } else {
             (Direction::Left, Direction::Right)
