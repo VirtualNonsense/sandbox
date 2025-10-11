@@ -3,6 +3,7 @@ use crossterm::event::{DisableMouseCapture, EnableMouseCapture};
 use crate::app::App;
 
 pub mod app;
+pub(crate) mod coord;
 pub mod event;
 pub mod particle;
 mod simulation_widget;

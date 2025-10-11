@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use crate::coord::Direction;
 use color_eyre::eyre::{self, Ok};
 use rand;
 
@@ -17,17 +18,6 @@ pub enum Action {
     Replace(Cell),
     Move(Direction),
     Vanish,
-}
-#[derive(Hash, PartialEq, Eq)]
-pub enum Direction {
-    Up,
-    UpRight,
-    UpLeft,
-    Right,
-    Left,
-    Down,
-    DownRight,
-    DownLeft,
 }
 
 impl Cell {
