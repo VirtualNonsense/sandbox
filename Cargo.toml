@@ -10,5 +10,5 @@ license = "MIT"
 color-eyre = "0.6.3"
 crossterm = "0.28.1"
 rand = "0.9.2"
-ratatui = "0.29.0"
+ratatui = "0.30.0"
 
